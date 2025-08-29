@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المسافر المفسر | Tadabbur Al-Qur'an</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            direction: rtl;
+            background-color: #f1f5f9;
+        }
+        .arabic-text, .arabic-heading, .arabic-input {
+            font-family: 'Almarai', serif;
+        }
+        .rtl-content { direction: rtl; }
+        .ltr-content { direction: ltr; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .gemini-content { text-align: left; }
+        .gemini-content.ltr-content { direction: ltr; }
+        .gemini-content.rtl-content { direction: rtl; text-align: right; }
+        .gemini-content h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; color: #1e3a8a; }
+        .gemini-content h4 { font-size: 1rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.25rem; color: #1d4ed8; }
+        .gemini-content p { margin-bottom: 1rem; }
+        .gemini-content ul { list-style-type: disc; padding-left: 20px; margin-bottom: 1rem; }
+        .nav-arrow { background: none; border: none; font-size: 2.5rem; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
+        .nav-arrow:hover { color: #334155; }
+        .nav-arrow:disabled { color: #e2e8f0; cursor: not-allowed; }
+        .lang-btn { padding: 0.5rem 1rem; border: 1px solid #cbd5e1; color: #64748b; cursor: pointer; transition: all 0.2s; }
+        .lang-btn:first-child { border-radius: 0 0.5rem 0.5rem 0; }
+        .lang-btn:last-child { border-radius: 0.5rem 0 0 0.5rem; }
+        .lang-btn.active-lang { background-color: #0284c7; color: white; border-color: #0284c7; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        
+        <header class="text-center mb-6">
+            <h1 class="arabic-heading text-4xl md:text-5xl text-slate-900">
+                <span>الـ</span><span class="text-sky-600">مسافر</span><span> الـ</span><span class="text-sky-600">مفسر</span>
+            </h1>
+            <p class="text-lg text-slate-600 mt-2 ltr-content tracking-wider text-center">The Traveller, The Interpreter</p>
+        </header>
+
+        <div id="lang-selector" class="flex justify-center mb-6">
+            <button id="lang-en" class="lang-btn active-lang">English</button>
+            <button id="lang-ar" class="lang-btn">العربية</button>
+        </div>
+
+        <main class="bg-white rounded-2xl shadow-lg p-6 md:p-8 min-h-[400px] mb-24">
+            
+            <div id="loading-state" class="hidden text-center">
+                <div class="loader"></div>
+                <p class="text-slate-500" data-lang-key="loadingQuran"></p>
+            </div>
+            
+            <div id="error-state" class="hidden text-center p-8 bg-red-50 text-red-700 rounded-lg">
+                <h3 class="font-bold text-lg mb-2" data-lang-key="connectionError"></h3>
+                <p data-lang-key="connectionErrorMsg"></p>
+            </div>
+
+            <div id="app-content">
+                <!-- Verse Selection -->
+                <div class="flex flex-col md:flex-row gap-4 mb-8 rtl-content">
+                    <div class="flex-1"><label for="surah-select" class="block mb-2 text-sm font-medium text-slate-700" data-lang-key="selectSurah"></label><select id="surah-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"></select></div>
+                    <div class="flex-1"><label for="verse-select" class="block mb-2 text-sm font-medium text-slate-700" data-lang-key="selectVerse"></label><select id="verse-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2.5"></select></div>
+                </div>
+                
+                <div id="basmalah-display" class="hidden text-center mb-4">
+                    <p class="arabic-text text-2xl text-slate-600">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 mb-8"><button id="prev-verse-btn" class="nav-arrow" aria-label="Previous Verse">&lt;</button><div class="p-6 bg-slate-50 rounded-xl border border-slate-200 min-h-[100px] flex flex-col items-center justify-center w-full"><p id="arabic-verse" class="arabic-text text-3xl md:text-4xl text-center leading-relaxed text-slate-900"></p><p id="english-verse" class="ltr-content text-center italic text-slate-600 mt-4"></p></div><button id="next-verse-btn" class="nav-arrow" aria-label="Next Verse">&gt;</button></div>
+                
+                <!-- Verse Tadabbur Section -->
+                <div class="pt-6 border-t border-slate-200 rtl-content">
+                    <div class="text-center"><button id="gemini-btn" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition-colors shadow-md" data-lang-key="deepenVerse"></button></div>
+                    <div id="gemini-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="contemplating"></p></div>
+                    <div id="gemini-response" class="mt-4 p-6 bg-sky-50 rounded-lg border border-sky-200 text-slate-700 leading-relaxed hidden gemini-content"></div>
+                </div>
+
+                <!-- Exploration Tools Section -->
+                <div class="mt-10 pt-6 border-t-2 border-dashed border-slate-300 rtl-content">
+                    <h2 class="arabic-heading text-3xl text-center text-slate-700 mb-6" data-lang-key="explorationTools"></h2>
+                    <div class="mb-8">
+                        <label for="theme-input" class="block mb-2 text-lg font-bold text-slate-700" data-lang-key="thematicExploration"></label>
+                        <div class="flex gap-2"><input type="text" id="theme-input" class="arabic-input w-full p-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" data-lang-key="themePlaceholder"><button id="theme-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors" data-lang-key="explore"></button></div>
+                        <div id="theme-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="exploring"></p></div>
+                        <div id="theme-response" class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hidden gemini-content"></div>
+                    </div>
+                    <div>
+                        <label for="root-input" class="block mb-2 text-lg font-bold text-slate-700" data-lang-key="rootCompass"></label>
+                        <div class="flex gap-2"><input type="text" id="root-input" class="arabic-input w-full p-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" data-lang-key="rootPlaceholder"><button id="root-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors" data-lang-key="analyze"></button></div>
+                        <div id="root-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="analyzing"></p></div>
+                        <div id="root-response" class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hidden gemini-content"></div>
+                    </div>
+                </div>
+
+                 <!-- Daily Reflection Section -->
+                <div class="mt-10 pt-6 border-t-2 border-dashed border-slate-300 rtl-content">
+                    <div class="text-center">
+                        <button id="daily-reflection-btn" class="bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors shadow-lg text-lg" data-lang-key="dailyReflection"></button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Global State ---
+        let quranCache = {}; 
+        let fullMetadata = {};
+        let selectedLanguage = 'en';
+
+        // --- Translation Dictionary ---
+        const translations = {
+            en: { selectSurah: "Select Surah", selectVerse: "Select Verse", verse: "Verse", deepenVerse: "✨ Deepen Understanding of Verse", explorationTools: "Exploration Tools", thematicExploration: "Thematic Exploration", themePlaceholder: "e.g., Gratitude, Trust, Patience...", explore: "Explore", rootCompass: "Root-Word Compass", rootPlaceholder: "e.g., رحم, فلح, علم...", analyze: "Analyze", dailyReflection: "Receive a Daily Reflection", contemplating: "Contemplating...", exploring: "Exploring...", analyzing: "Analyzing...", loadingQuran: "Loading Qur'an data...", connectionError: "Connection Error", connectionErrorMsg: "Could not connect to the Qur'an libraries. Please check your internet connection and try again." },
+            ar: { selectSurah: "اختر السورة", selectVerse: "اختر الآية", verse: "الآية", deepenVerse: "✨ تدبر أعمق للآية", explorationTools: "أدوات الاستكشاف", thematicExploration: "بحث موضوعي", themePlaceholder: "مثال: الصبر، الشكر، التوكل...", explore: "استكشف", rootCompass: "بوصلة الجذر", rootPlaceholder: "مثال: رحم، فلح، علم...", analyze: "حلل", dailyReflection: "استقبل تدبرًا يوميًا", contemplating: "يتدبر...", exploring: "يستكشف...", analyzing: "يحلل...", loadingQuran: "جاري تحميل بيانات القرآن...", connectionError: "خطأ في الاتصال", connectionErrorMsg: "تعذر الاتصال بمكتبات القرآن. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى." }
+        };
+
+        // --- DOM Elements ---
+        const surahSelect = document.getElementById('surah-select');
+        const verseSelect = document.getElementById('verse-select');
+        const arabicVerseEl = document.getElementById('arabic-verse');
+        const englishVerseEl = document.getElementById('english-verse');
+        const basmalahDisplay = document.getElementById('basmalah-display');
+        const loadingStateEl = document.getElementById('loading-state');
+        const errorStateEl = document.getElementById('error-state');
+        const appContentEl = document.getElementById('app-content');
+        const geminiBtn = document.getElementById('gemini-btn');
+        const geminiLoader = document.getElementById('gemini-loader');
+        const geminiResponseEl = document.getElementById('gemini-response');
+        const nextVerseBtn = document.getElementById('next-verse-btn');
+        const prevVerseBtn = document.getElementById('prev-verse-btn');
+        const langEnBtn = document.getElementById('lang-en');
+        const langArBtn = document.getElementById('lang-ar');
+        const themeInput = document.getElementById('theme-input');
+        const themeBtn = document.getElementById('theme-btn');
+        const themeLoader = document.getElementById('theme-loader');
+        const themeResponse = document.getElementById('theme-response');
+        const rootInput = document.getElementById('root-input');
+        const rootBtn = document.getElementById('root-btn');
+        const rootLoader = document.getElementById('root-loader');
+        const rootResponse = document.getElementById('root-response');
+        const dailyReflectionBtn = document.getElementById('daily-reflection-btn');
+
+        // --- Backup API Configuration ---
+        const QURAN_APIS = [
+            { metaUrl: 'https://api.alquran.cloud/v1/meta', surahUrl: (num) => `https://api.alquran.cloud/v1/surah/${num}/editions/quran-uthmani,en.sahih`, parseMeta: (data) => data.data.surahs.references, parseSurah: (data) => ({ ...data.data[0], englishAyahs: data.data[1].ayahs }) }
+        ];
+
+        // --- Functions ---
+
+        function setLanguage(lang) {
+            selectedLanguage = lang;
+            const langStrings = translations[lang];
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.getAttribute('data-lang-key');
+                if (langStrings[key]) {
+                    if (el.tagName === 'INPUT') el.placeholder = langStrings[key];
+                    else el.textContent = langStrings[key];
+                }
+            });
+            langEnBtn.classList.toggle('active-lang', lang === 'en');
+            langArBtn.classList.toggle('active-lang', lang === 'ar');
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            if (Object.keys(fullMetadata).length > 0) {
+                populateSurahDropdown();
+                const currentSurahData = quranCache[surahSelect.value];
+                if (currentSurahData) {
+                    populateVerses(currentSurahData);
+                    displayVerse(currentSurahData, parseInt(verseSelect.value));
+                }
+            }
+        }
+        
+        function setLoading(isLoading) { loadingStateEl.classList.toggle('hidden', !isLoading); appContentEl.classList.toggle('hidden', isLoading); errorStateEl.classList.add('hidden'); }
+        function showError() { loadingStateEl.classList.add('hidden'); appContentEl.classList.add('hidden'); errorStateEl.classList.remove('hidden'); }
+
+        function populateSurahDropdown() {
+            const currentVal = surahSelect.value;
+            surahSelect.innerHTML = '';
+            fullMetadata.forEach(surah => {
+                const option = document.createElement('option');
+                option.value = surah.number;
+                option.textContent = selectedLanguage === 'ar' 
+                    ? `${surah.number}. ${surah.name}`
+                    : `${surah.number}. ${surah.englishName}`;
+                surahSelect.appendChild(option);
+            });
+            surahSelect.value = currentVal || 1;
+        }
+
+        async function populateSurahList() {
+            for (const api of QURAN_APIS) {
+                try {
+                    const response = await fetch(api.metaUrl);
+                    if (!response.ok) throw new Error('API response not ok');
+                    const data = await response.json();
+                    fullMetadata = api.parseMeta(data);
+                    populateSurahDropdown();
+                    return;
+                } catch (error) { console.warn(`Primary API for metadata failed, trying backup...`, error); }
+            }
+            showError();
+        }
+
+        async function getSurahData(surahNumber) {
+            if (quranCache[surahNumber]) return quranCache[surahNumber];
+            for (const api of QURAN_APIS) {
+                try {
+                    const response = await fetch(api.surahUrl(surahNumber));
+                    if (!response.ok) throw new Error('API response not ok');
+                    const data = await response.json();
+                    const parsedData = api.parseSurah(data);
+                    quranCache[surahNumber] = parsedData;
+                    return parsedData;
+                } catch (error) { console.warn(`Primary API for Surah ${surahNumber} failed, trying backup...`, error); }
+            }
+            showError(); return null;
+        }
+
+        function populateVerses(surahData) {
+            const currentVal = verseSelect.value;
+            verseSelect.innerHTML = '';
+            surahData.ayahs.forEach(ayah => {
+                const option = document.createElement('option');
+                option.value = ayah.numberInSurah;
+                option.textContent = `${translations[selectedLanguage].verse} ${ayah.numberInSurah}`;
+                verseSelect.appendChild(option);
+            });
+            verseSelect.value = currentVal || 1;
+        }
+
+        function displayVerse(surahData, verseNumber) {
+            const verseData = surahData.ayahs[verseNumber - 1];
+            const englishVerseData = surahData.englishAyahs[verseNumber - 1];
+            if (!verseData || !englishVerseData) return;
+            
+            let arabicText = verseData.text;
+            let englishText = englishVerseData.text;
+            const basmalahArabic = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+            
+            const surahNum = surahData.number;
+            if (surahNum > 1 && surahNum !== 9) {
+                basmalahDisplay.classList.remove('hidden');
+                if (verseNumber === 1 && arabicText.trim().startsWith(basmalahArabic)) {
+                    arabicText = arabicText.replace(basmalahArabic, '').trim();
+                }
+            } else {
+                basmalahDisplay.classList.add('hidden');
+            }
+
+            arabicVerseEl.textContent = arabicText;
+            englishVerseEl.textContent = englishText;
+            englishVerseEl.style.display = selectedLanguage === 'en' ? 'block' : 'none';
+
+            verseSelect.value = verseNumber;
+            geminiResponseEl.classList.add('hidden');
+            geminiResponseEl.innerHTML = '';
+            prevVerseBtn.disabled = verseNumber === 1;
+            nextVerseBtn.disabled = verseNumber === surahData.numberOfAyahs;
+        }
+        
+        async function callGemini(prompt, loaderEl, responseEl, lang) {
+            loaderEl.classList.remove('hidden');
+            responseEl.classList.add('hidden');
+            try {
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    let htmlText = text
+                        .replace(/\*\*(.*?)\*\*/g, '<h3>$1</h3>')
+                        .replace(/\*(.*?)\*/g, '<h4>$1</h4>')
+                        .replace(/\n/g, '<br>');
+                    responseEl.innerHTML = htmlText;
+                    responseEl.classList.remove('ltr-content', 'rtl-content');
+                    responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
+                } else { throw new Error("Invalid response structure from API."); }
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                responseEl.innerHTML = `<p class="text-red-500 text-center">Sorry, a reflection could not be generated at this time.</p>`;
+            } finally {
+                loaderEl.classList.add('hidden');
+                responseEl.classList.remove('hidden');
+            }
+        }
+
+        function getMasterPrompt() {
+            return `You are a specialized AI assistant for Tadabbur al-Qur'an. Your entire analysis MUST be based on the principle that the Qur'an explains itself. 
+            **Quarantine Protocol:** Do NOT use any external sources (historical stories, Hadith, classical tafsir) as the primary basis for your explanation. You must build your understanding from the Qur'anic text alone.
+            **Translation Mandate:** When the response language is English, every Arabic word or quoted verse MUST be immediately followed by its English translation in parentheses. For example: "The word الحمد (Al-Hamd)..." or "...as mentioned in 'بسم الله الرحمن الرحيم' (In the name of Allah, the Entirely Merciful, the Especially Merciful)." This is crucial for reader comprehension.
+            **Some Rules that You need to see the Text through:**
+            1. Every root of the word is indicating one specific meaning but used in different facets & ways.
+            2. The root Word can be used in the same way but indicate different facets of the meaning (e.g., the different meanings of 'ضرب').
+            3. The root word can be placed into different morphological patterns (أوزان) which changes its direction but not its core meaning. Pay close attention to the specific pattern (وزن), for example, the difference between فعلان (Fa'laan), فعيل (Fa'eel), and فعال (Fa'aal).
+            4. Take into consideration of depths of meaning including all facets of life (كتاب مثاني - Depths & Dualistic in nature).
+            5. Some verses are interconnected even if they are in different suras & make a web of a perfect map.
+            6. There is no contradiction in the quran.
+            7. There are different facets of the same subject.
+            8. There are some letters which acts as words (e.g., ب in بسم).
+            9. The Quranic arabic is a language in itself & we are discovering the meaning from it by itself.
+            10. Consider all the ways the root word comes in (e.g., محمد، أحمد، محمود).
+            11. القرآن يفسر بعضه بعضا ولا يلزم لفهمه المعاجم او الحديث النبوي.
+            12. The Quran has a lot of different subjects as Whole systems.
+            13. The Quran also has a lot of metaphors & teachings through Stories.
+            14. The Principle of Perspective and Voice (منظور المتكلم والمخاطب): Always consider who is speaking (Allah, the Prophet, an angel, etc.) and to whom they are speaking (the believers, all of humanity, etc.) to understand the full context and depth of the message, & When God mentions himself as (نحن) Consider that he is talking as Him & The Systems that he created(Universe) so there is difference when he says (أنا) & (نحن).
+            15. The Principle of Qur'anic Temporality (زمنية القرآن): Pay special attention to verb tenses.
+            16. The Principle of the Two Worlds (عالم الغيب وعالم الشهادة) Coherent with the Duality nature of the Quran: Analyze how the verse unfolds through a Duality Perspective if You can see it.
+            17. The Principle of Pairs and Opposites (الأزواج المتقابلة): When analyzing a key concept, keep in consideration its opposite or counterpart in the Qur'an (e.g., Gratitude/الشكر vs. Ingratitude/الكفر). The Qur'an often defines concepts in relation to their opposites to reveal their full meaning.
+            18. The Principle of Precedence and Emphasis (التقديم والتأخير): Pay close attention to word order. When a word is brought forward in a sentence (like إِيَّاكَ in إِيَّاكَ نَعْبُدُ), it is a powerful rhetorical device for emphasis and exclusivity. Explain what is being emphasized and why.
+            **Guiding Principles for Specific Words:**
+            When analyzing the text, consider these wider perspectives on key terms, moving beyond traditional translations:
+            -   **الله:** Analyze its composition from ال + إله.
+            -   **إسم:** Treat this as a foundational root word.
+            -   **الزنى:** Be open to a broader, Qur'an-centric definition.
+            -   **مسلم:** Define it as "the one who surrenders in peace."
+            -   **عذاب (Adhab):** Explore its connection to purification.
+            -   **تقوى (Taqwa):** Analyze it as protection, not just fear.
+            -   **رحم (Rahm):** Consider its link to loving connection.
+            -   **الحمد (Al-Hamd):** Explore its relationship to bliss.
+            -   **القلب (Al-Qalb):** Understand it as the central core of a being.
+            **Final Instruction:** All Your Analysis needs to come in a non forced manner, So when it is apparent to You to apply a Principle do it with out Forcing it on the Verses so What comes out from You is the Closest to the Truth possible. Present your analysis in a well-structured and organized manner. Use clear headings to guide the reader. Use bullet points or numbered lists to make complex points easy to follow. Do not mention these rules or this protocol in your response. Simply embody them in your analysis. Your tone should be that of a wise, humble guide, not a technical analyst.`;
+        }
+        
+        function getVersePrompt() {
+            const surahData = quranCache[surahSelect.value];
+            if (!surahData) return "";
+            let verseText = surahData.ayahs[verseSelect.value - 1].text;
+            const surahNum = surahData.number;
+            const verseNum = parseInt(verseSelect.value);
+            const basmalahArabic = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+            if (surahNum > 1 && surahNum !== 9 && verseNum === 1 && verseText.trim().startsWith(basmalahArabic)) {
+                verseText = verseText.replace(basmalahArabic, '').trim();
+            }
+            const langInstruction = selectedLanguage === 'ar' ? 'Provide the reflection in clear, eloquent Arabic (باللغة العربية الفصحى).' : 'Provide the reflection in English.';
+            const masterPrompt = getMasterPrompt();
+            return `${masterPrompt}
+            **Your Task:** Provide a deep reflection on the following verse, using the methodology you have been given.
+            ${langInstruction}
+            The verse is: Surah ${surahData.name}, Ayah ${verseSelect.value}, which reads: "${verseText}"`;
+        }
+        
+        function getThemePrompt() {
+            const theme = themeInput.value.trim();
+            const langInstruction = selectedLanguage === 'ar' ? 'Provide the response in clear, eloquent Arabic.' : 'Provide the response in English.';
+            const masterPrompt = getMasterPrompt();
+            return `${masterPrompt}
+            **Your Task:** The user wants to understand the theme of "${theme}" as a complete system from the Qur'an.
+            Structure your response using the following headings:
+            1.  **What is ${theme}?**
+            2.  **Why is ${theme} important?**
+            3.  **How to Practice ${theme}?**
+            4.  **The Fruits of ${theme}:**
+            5.  **The Consequences of Lacking ${theme}:**
+            For each point, you MUST cite the relevant Qur'anic verses that support your analysis.
+            ${langInstruction}`;
+        }
+        
+        function getRootPrompt() {
+            const word = rootInput.value.trim();
+            const langInstruction = selectedLanguage === 'ar' ? 'Provide the response in clear, eloquent Arabic.' : 'Provide the response in English.';
+            const masterPrompt = getMasterPrompt();
+            return `${masterPrompt}
+            **Your Task:** The user has provided the root or a word from it: "${word}".
+            1.  **Identify the three-letter root (الجذر)**.
+            2.  **Explain the core, intrinsic meaning** of this root.
+            3.  **Systematically list the different derivative words** that appear in the Qur'an from this root.
+            4.  For **each derivative**, provide one example verse.
+            5.  Briefly explain how the derivative's meaning in the verse connects back to the core meaning of the root.
+            ${langInstruction}`;
+        }
+
+        // --- Event Handlers ---
+        async function getVerseReflection() {
+            geminiBtn.disabled = true;
+            await callGemini(getVersePrompt(), geminiLoader, geminiResponseEl, selectedLanguage);
+            geminiBtn.disabled = false;
+        }
+
+        async function getThematicExploration() {
+            if (!themeInput.value.trim()) return;
+            themeBtn.disabled = true;
+            await callGemini(getThemePrompt(), themeLoader, themeResponse, selectedLanguage);
+            themeBtn.disabled = false;
+        }
+        
+        async function getRootAnalysis() {
+            if (!rootInput.value.trim()) return;
+            rootBtn.disabled = true;
+            await callGemini(getRootPrompt(), rootLoader, rootResponse, selectedLanguage);
+            rootBtn.disabled = false;
+        }
+        
+        async function getRandomVerse() {
+            dailyReflectionBtn.disabled = true;
+            setLoading(true);
+            
+            const randomSurahNum = Math.floor(Math.random() * 114) + 1;
+            const surahData = await getSurahData(randomSurahNum);
+            
+            if (surahData) {
+                const randomVerseNum = Math.floor(Math.random() * surahData.numberOfAyahs) + 1;
+                surahSelect.value = randomSurahNum;
+                populateSurahDropdown();
+                populateVerses(surahData);
+                verseSelect.value = randomVerseNum;
+                displayVerse(surahData, randomVerseNum);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            
+            setLoading(false);
+            dailyReflectionBtn.disabled = false;
+        }
+        
+        surahSelect.addEventListener('change', async (e) => {
+            setLoading(true);
+            const surahNumber = e.target.value;
+            const surahData = await getSurahData(surahNumber);
+            if (surahData) {
+                populateVerses(surahData);
+                displayVerse(surahData, 1);
+            }
+            setLoading(false);
+        });
+        verseSelect.addEventListener('change', (e) => {
+            const surahData = quranCache[surahSelect.value];
+            if(surahData) displayVerse(surahData, parseInt(e.target.value));
+        });
+        nextVerseBtn.addEventListener('click', () => {
+            const surahData = quranCache[surahSelect.value];
+            if(surahData) displayVerse(surahData, parseInt(verseSelect.value) + 1);
+        });
+        prevVerseBtn.addEventListener('click', () => {
+            const surahData = quranCache[surahSelect.value];
+            if(surahData) displayVerse(surahData, parseInt(verseSelect.value) - 1);
+        });
+        langEnBtn.addEventListener('click', () => setLanguage('en'));
+        langArBtn.addEventListener('click', () => setLanguage('ar'));
+        geminiBtn.addEventListener('click', getVerseReflection);
+        themeBtn.addEventListener('click', getThematicExploration);
+        rootBtn.addEventListener('click', getRootAnalysis);
+        dailyReflectionBtn.addEventListener('click', getRandomVerse);
+
+        // --- Initial Load ---
+        async function initializeApp() {
+            setLoading(true);
+            await populateSurahList();
+            if (Object.keys(fullMetadata).length > 0) {
+                const initialSurahData = await getSurahData(1);
+                if (initialSurahData) {
+                    surahSelect.value = 1; 
+                    populateVerses(initialSurahData);
+                    verseSelect.value = 1;
+                    displayVerse(initialSurahData, 1);
+                }
+            }
+            setLanguage('en');
+            setLoading(false);
+        }
+
+        initializeApp();
+    </script>
+</body>
+</html>
