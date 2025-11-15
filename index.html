@@ -367,17 +367,14 @@
                             }
                         }
                         
-                        // Check HTTP status independently - don't require result.error to exist
-                        if (!response.ok) {
-                            const errorMsg = result.error 
-                                ? result.error.message || JSON.stringify(result.error)
-                                : `API call failed with status: ${response.status}`;
-                            throw new Error(errorMsg);
-                        }
-                        
                         // Check for other errors in response body
                         if (result.error) {
                             throw new Error(result.error.message || JSON.stringify(result.error));
+                        }
+                        
+                        // Check HTTP status independently - don't require result.error to exist
+                        if (!response.ok) {
+                            throw new Error(`API call failed with status: ${response.status}`);
                         }
                         
                         // Success - process response
