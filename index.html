@@ -128,6 +128,9 @@
         let quranCache = {}; 
         let fullMetadata = {};
         let selectedLanguage = 'en';
+        let lastApiCallTime = 0; // Track last API call time for rate limiting
+        const MIN_API_CALL_INTERVAL = 2000; // Minimum 2 seconds between calls
+        let responseCache = {}; // Cache responses to avoid re-processing
 
         // --- Translation Dictionary ---
         const translations = {
@@ -284,27 +287,124 @@
             loaderEl.classList.remove('hidden');
             responseEl.classList.add('hidden');
             try {
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiKey = "AIzaSyDAsA2bO23amF0-IEKwf2JBP9KxpEev4QU";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
-                const result = await response.json();
-                
-                if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    let htmlText = text
+                // Check cache first - instant response for previously processed prompts
+                const cacheKey = `${prompt.substring(0, 100)}_${lang}`; // Use first 100 chars + lang as key
+                if (responseCache[cacheKey]) {
+                    console.log("Using cached response");
+                    const cachedText = responseCache[cacheKey];
+                    let htmlText = cachedText
                         .replace(/\*\*(.*?)\*\*/g, '<h3>$1</h3>')
                         .replace(/\*(.*?)\*/g, '<h4>$1</h4>')
                         .replace(/\n/g, '<br>');
                     responseEl.innerHTML = htmlText;
                     responseEl.classList.remove('ltr-content', 'rtl-content');
                     responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
-                } else { throw new Error("Invalid response structure from API."); }
+                    loaderEl.classList.add('hidden');
+                    responseEl.classList.remove('hidden');
+                    return;
+                }
+                
+                const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsZBDSAmLWTSl5l33yoCGyumtue0bWvDk3EBSapLFh5IdT5GJHy76L-TQoAXXwx5Oe/exec";
+                
+                // Rate limiting: ensure minimum time between requests
+                const now = Date.now();
+                const timeSinceLastCall = now - lastApiCallTime;
+                if (timeSinceLastCall < MIN_API_CALL_INTERVAL) {
+                    const waitTime = MIN_API_CALL_INTERVAL - timeSinceLastCall;
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+                
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                
+                // Retry logic with exponential backoff
+                const maxRetries = 3;
+                let lastError;
+                
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        lastApiCallTime = Date.now();
+                        
+                        const response = await fetch(APPS_SCRIPT_URL, { 
+                            method: 'POST', 
+                            headers: { 
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: 'data=' + encodeURIComponent(JSON.stringify(payload))
+                        });
+                        
+                        const responseText = await response.text();
+                        let result;
+                        try {
+                            result = JSON.parse(responseText);
+                        } catch (parseError) {
+                            console.error("Failed to parse response:", responseText);
+                            throw new Error("Invalid JSON response from server");
+                        }
+                        
+                        // Check for rate limit error (429)
+                        if (result.error && result.error.code === 429) {
+                            const retryAfter = Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff, max 10s
+                            if (attempt < maxRetries - 1) {
+                                console.log(`Rate limit hit. Retrying in ${retryAfter}ms... (attempt ${attempt + 1}/${maxRetries})`);
+                                await new Promise(resolve => setTimeout(resolve, retryAfter));
+                                continue; // Retry
+                            } else {
+                                throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+                            }
+                        }
+                        
+                        // Check for other errors
+                        if (result.error) {
+                            throw new Error(result.error.message || JSON.stringify(result.error));
+                        }
+                        
+                        if (!response.ok && result.error) {
+                            throw new Error(`API call failed with status: ${response.status}`);
+                        }
+                        
+                        // Success - process response
+                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
+                            const text = result.candidates[0].content.parts[0].text;
+                            
+                            // Cache the response for instant future access
+                            const cacheKey = `${prompt.substring(0, 100)}_${lang}`;
+                            responseCache[cacheKey] = text;
+                            
+                            let htmlText = text
+                                .replace(/\*\*(.*?)\*\*/g, '<h3>$1</h3>')
+                                .replace(/\*(.*?)\*/g, '<h4>$1</h4>')
+                                .replace(/\n/g, '<br>');
+                            responseEl.innerHTML = htmlText;
+                            responseEl.classList.remove('ltr-content', 'rtl-content');
+                            responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
+                            return; // Success, exit function
+                        } else {
+                            console.error("Unexpected response structure:", result);
+                            throw new Error("Invalid response structure from API. Check console for details.");
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        // If it's not a rate limit error or we've exhausted retries, break
+                        if (error.message && !error.message.includes("Rate limit") && !error.message.includes("429")) {
+                            break;
+                        }
+                        // For rate limit errors, continue retry loop
+                        if (attempt === maxRetries - 1) {
+                            break; // Last attempt failed
+                        }
+                    }
+                }
+                
+                // If we get here, all retries failed
+                throw lastError || new Error("Request failed after multiple attempts");
+                
             } catch (error) {
                 console.error("Gemini API Error:", error);
-                responseEl.innerHTML = `<p class="text-red-500 text-center">Sorry, a reflection could not be generated at this time.</p>`;
+                const errorMessage = error.message.includes("Rate limit") 
+                    ? "Rate limit exceeded. Please wait a moment before trying again."
+                    : `Sorry, a reflection could not be generated at this time. ${error.message}`;
+                responseEl.innerHTML = `<p class="text-red-500 text-center">${errorMessage}</p>`;
             } finally {
                 loaderEl.classList.add('hidden');
                 responseEl.classList.remove('hidden');
