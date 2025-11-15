@@ -46,6 +46,9 @@
         .lang-btn:first-child { border-radius: 0 0.5rem 0.5rem 0; }
         .lang-btn:last-child { border-radius: 0.5rem 0 0 0.5rem; }
         .lang-btn.active-lang { background-color: #0284c7; color: white; border-color: #0284c7; }
+        .model-btn { background-color: transparent; color: #64748b; border: none; cursor: pointer; }
+        .model-btn.active-model { background-color: #0284c7; color: white; }
+        .model-btn:hover:not(.active-model) { background-color: #e2e8f0; color: #334155; }
     </style>
 </head>
 <body class="text-slate-800">
@@ -91,7 +94,20 @@
                 
                 <!-- Verse Tadabbur Section -->
                 <div class="pt-6 border-t border-slate-200 rtl-content">
-                    <div class="text-center"><button id="gemini-btn" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition-colors shadow-md" data-lang-key="deepenVerse"></button></div>
+                    <div class="text-center mb-4">
+                        <div class="flex items-center justify-center gap-4 mb-3">
+                            <span class="text-sm text-slate-600" data-lang-key="modelSpeed">Model Speed:</span>
+                            <div class="flex gap-2 bg-slate-100 rounded-lg p-1">
+                                <button id="model-fast" class="model-btn px-4 py-1 rounded text-sm font-medium transition-colors active-model" data-model="fast">
+                                    <span data-lang-key="fast">⚡ Fast</span>
+                                </button>
+                                <button id="model-thinking" class="model-btn px-4 py-1 rounded text-sm font-medium transition-colors" data-model="thinking">
+                                    <span data-lang-key="thinking">🧠 Thinking</span>
+                                </button>
+                            </div>
+                        </div>
+                        <button id="gemini-btn" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition-colors shadow-md" data-lang-key="deepenVerse"></button>
+                    </div>
                     <div id="gemini-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="contemplating"></p></div>
                     <div id="gemini-response" class="mt-4 p-6 bg-sky-50 rounded-lg border border-sky-200 text-slate-700 leading-relaxed hidden gemini-content"></div>
                 </div>
@@ -128,14 +144,73 @@
         let quranCache = {}; 
         let fullMetadata = {};
         let selectedLanguage = 'en';
+        let selectedModel = 'fast'; // 'fast' or 'thinking'
         let lastApiCallTime = 0; // Track last API call time for rate limiting
         const MIN_API_CALL_INTERVAL = 2000; // Minimum 2 seconds between calls
         let responseCache = {}; // Cache responses to avoid re-processing
+        // Streaming Configuration
+        // Set ENABLE_STREAMING to true to enable streaming responses (text appears as it's generated)
+        // Set to false to use traditional non-streaming mode (wait for complete response)
+        const ENABLE_STREAMING = true; // Set to false to use non-streaming mode
+        const STREAMING_ENDPOINT = null; // Set to SSE endpoint URL if different from main endpoint
+        
+        /*
+         * STREAMING SETUP INSTRUCTIONS:
+         * 
+         * Note: Google Apps Script Web Apps have limitations with true real-time streaming
+         * because responses are buffered. For best results, consider:
+         * 
+         * Option 1: Direct Gemini API (Recommended for true streaming)
+         * - Use Gemini API directly with streamGenerateContent()
+         * - Set STREAMING_ENDPOINT to your streaming API URL
+         * - This provides true real-time streaming
+         * 
+         * Option 2: Modified Google Apps Script (Limited streaming)
+         * - Modify your Apps Script to return chunks in SSE format
+         * - Note: Chunks may arrive in batches, not truly real-time
+         * 
+         * Example Google Apps Script modification:
+         * 
+         * function doPost(e) {
+         *   const data = JSON.parse(e.parameter.data);
+         *   const isStreaming = data.stream === true;
+         *   
+         *   if (isStreaming) {
+         *     // Call Gemini with streaming
+         *     const model = genai.getGenerativeModel({ model: "gemini-pro" });
+         *     const result = model.generateContentStream(data.contents);
+         *     
+         *     let output = ContentService.createTextOutput();
+         *     output.setMimeType(ContentService.MimeType.TEXT);
+         *     
+         *     for await (const chunk of result.stream) {
+         *       const text = chunk.text();
+         *       output.append('data: {"text": "' + text.replace(/"/g, '\\"') + '"}\n\n');
+         *     }
+         *     output.append('data: [DONE]\n\n');
+         *     return output;
+         *   }
+         *   
+         *   // Regular non-streaming response
+         *   // ... existing code ...
+         * }
+         */
+        
+        // Simple hash function for cache keys to prevent collisions
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return hash.toString(36);
+        }
 
         // --- Translation Dictionary ---
         const translations = {
-            en: { selectSurah: "Select Surah", selectVerse: "Select Verse", verse: "Verse", deepenVerse: "✨ Deepen Understanding of Verse", explorationTools: "Exploration Tools", thematicExploration: "Thematic Exploration", themePlaceholder: "e.g., Gratitude, Trust, Patience...", explore: "Explore", rootCompass: "Root-Word Compass", rootPlaceholder: "e.g., رحم, فلح, علم...", analyze: "Analyze", dailyReflection: "Receive a Daily Reflection", contemplating: "Contemplating...", exploring: "Exploring...", analyzing: "Analyzing...", loadingQuran: "Loading Qur'an data...", connectionError: "Connection Error", connectionErrorMsg: "Could not connect to the Qur'an libraries. Please check your internet connection and try again." },
-            ar: { selectSurah: "اختر السورة", selectVerse: "اختر الآية", verse: "الآية", deepenVerse: "✨ تدبر أعمق للآية", explorationTools: "أدوات الاستكشاف", thematicExploration: "بحث موضوعي", themePlaceholder: "مثال: الصبر، الشكر، التوكل...", explore: "استكشف", rootCompass: "بوصلة الجذر", rootPlaceholder: "مثال: رحم، فلح، علم...", analyze: "حلل", dailyReflection: "استقبل تدبرًا يوميًا", contemplating: "يتدبر...", exploring: "يستكشف...", analyzing: "يحلل...", loadingQuran: "جاري تحميل بيانات القرآن...", connectionError: "خطأ في الاتصال", connectionErrorMsg: "تعذر الاتصال بمكتبات القرآن. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى." }
+            en: { selectSurah: "Select Surah", selectVerse: "Select Verse", verse: "Verse", deepenVerse: "✨ Deepen Understanding of Verse", explorationTools: "Exploration Tools", thematicExploration: "Thematic Exploration", themePlaceholder: "e.g., Gratitude, Trust, Patience...", explore: "Explore", rootCompass: "Root-Word Compass", rootPlaceholder: "e.g., رحم, فلح, علم...", analyze: "Analyze", dailyReflection: "Receive a Daily Reflection", contemplating: "Contemplating...", exploring: "Exploring...", analyzing: "Analyzing...", loadingQuran: "Loading Qur'an data...", connectionError: "Connection Error", connectionErrorMsg: "Could not connect to the Qur'an libraries. Please check your internet connection and try again.", modelSpeed: "Model Speed:", fast: "⚡ Fast", thinking: "🧠 Thinking" },
+            ar: { selectSurah: "اختر السورة", selectVerse: "اختر الآية", verse: "الآية", deepenVerse: "✨ تدبر أعمق للآية", explorationTools: "أدوات الاستكشاف", thematicExploration: "بحث موضوعي", themePlaceholder: "مثال: الصبر، الشكر، التوكل...", explore: "استكشف", rootCompass: "بوصلة الجذر", rootPlaceholder: "مثال: رحم، فلح، علم...", analyze: "حلل", dailyReflection: "استقبل تدبرًا يوميًا", contemplating: "يتدبر...", exploring: "يستكشف...", analyzing: "يحلل...", loadingQuran: "جاري تحميل بيانات القرآن...", connectionError: "خطأ في الاتصال", connectionErrorMsg: "تعذر الاتصال بمكتبات القرآن. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.", modelSpeed: "سرعة النموذج:", fast: "⚡ سريع", thinking: "🧠 تفكير" }
         };
 
         // --- DOM Elements ---
@@ -154,6 +229,8 @@
         const prevVerseBtn = document.getElementById('prev-verse-btn');
         const langEnBtn = document.getElementById('lang-en');
         const langArBtn = document.getElementById('lang-ar');
+        const modelFastBtn = document.getElementById('model-fast');
+        const modelThinkingBtn = document.getElementById('model-thinking');
         const themeInput = document.getElementById('theme-input');
         const themeBtn = document.getElementById('theme-btn');
         const themeLoader = document.getElementById('theme-loader');
@@ -283,12 +360,210 @@
             nextVerseBtn.disabled = verseNumber === surahData.numberOfAyahs;
         }
         
+        // Helper function to format streaming text incrementally
+        function formatStreamingText(text) {
+            // Process markdown-style formatting incrementally
+            // Note: This is a simplified version that works with partial text
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<h3>$1</h3>')
+                .replace(/\*(.*?)\*/g, '<h4>$1</h4>')
+                .replace(/\n/g, '<br>');
+        }
+        
+        // Streaming version using Server-Sent Events (SSE) or ReadableStream
+        async function callGeminiStreaming(prompt, loaderEl, responseEl, lang) {
+            loaderEl.classList.remove('hidden');
+            responseEl.classList.add('hidden');
+            responseEl.innerHTML = '';
+            responseEl.classList.remove('ltr-content', 'rtl-content');
+            responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
+            
+            let accumulatedText = '';
+            const cacheKey = `${hashString(prompt)}_${lang}_${selectedModel}`;
+            
+            try {
+                // Check cache first
+                if (responseCache[cacheKey]) {
+                    console.log("Using cached response");
+                    const cachedText = responseCache[cacheKey];
+                    responseEl.innerHTML = formatStreamingText(cachedText);
+                    loaderEl.classList.add('hidden');
+                    responseEl.classList.remove('hidden');
+                    return;
+                }
+                
+                const APPS_SCRIPT_URL = STREAMING_ENDPOINT || "https://script.google.com/macros/s/AKfycbxsZBDSAmLWTSl5l33yoCGyumtue0bWvDk3EBSapLFh5IdT5GJHy76L-TQoAXXwx5Oe/exec";
+                
+                // Rate limiting
+                const now = Date.now();
+                const timeSinceLastCall = now - lastApiCallTime;
+                if (timeSinceLastCall < MIN_API_CALL_INTERVAL) {
+                    const waitTime = MIN_API_CALL_INTERVAL - timeSinceLastCall;
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+                lastApiCallTime = Date.now();
+                
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory, stream: true, modelType: selectedModel }; // Include model selection
+                
+                const response = await fetch(APPS_SCRIPT_URL, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'data=' + encodeURIComponent(JSON.stringify(payload))
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                
+                // Read the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let streamComplete = false;
+                
+                // Show response element immediately when first chunk arrives
+                let firstChunkReceived = false;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    // Decode chunk and add to buffer
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete lines (SSE format: "data: {...}\n\n")
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                    
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        if (!trimmedLine) continue;
+                        
+                        // Handle SSE format: "data: {...}"
+                        if (trimmedLine.startsWith('data: ')) {
+                            const data = trimmedLine.slice(6).trim();
+                            
+                            // Check for completion marker
+                            if (data === '[DONE]') {
+                                streamComplete = true;
+                                break;
+                            }
+                            
+                            // Parse JSON data
+                            try {
+                                const parsed = JSON.parse(data);
+                                
+                                // Handle text chunks
+                                if (parsed.text) {
+                                    accumulatedText += parsed.text;
+                                    
+                                    // Show response on first chunk
+                                    if (!firstChunkReceived) {
+                                        firstChunkReceived = true;
+                                        responseEl.classList.remove('hidden');
+                                        loaderEl.classList.add('hidden');
+                                    }
+                                    
+                                    // Update UI with formatted text
+                                    responseEl.innerHTML = formatStreamingText(accumulatedText);
+                                    
+                                    // Auto-scroll to bottom to follow the stream
+                                    responseEl.scrollTop = responseEl.scrollHeight;
+                                } 
+                                // Handle errors
+                                else if (parsed.error) {
+                                    throw new Error(parsed.error.message || JSON.stringify(parsed.error));
+                                }
+                            } catch (parseError) {
+                                // If not valid JSON, try treating as plain text
+                                if (data && data !== '[DONE]') {
+                                    accumulatedText += data;
+                                    if (!firstChunkReceived) {
+                                        firstChunkReceived = true;
+                                        responseEl.classList.remove('hidden');
+                                        loaderEl.classList.add('hidden');
+                                    }
+                                    responseEl.innerHTML = formatStreamingText(accumulatedText);
+                                }
+                            }
+                        }
+                        // Handle non-SSE format (plain JSON lines)
+                        else if (trimmedLine.startsWith('{')) {
+                            try {
+                                const parsed = JSON.parse(trimmedLine);
+                                if (parsed.text) {
+                                    accumulatedText += parsed.text;
+                                    if (!firstChunkReceived) {
+                                        firstChunkReceived = true;
+                                        responseEl.classList.remove('hidden');
+                                        loaderEl.classList.add('hidden');
+                                    }
+                                    responseEl.innerHTML = formatStreamingText(accumulatedText);
+                                } else if (parsed.error) {
+                                    throw new Error(parsed.error.message || JSON.stringify(parsed.error));
+                                }
+                            } catch (e) {
+                                // Ignore parse errors for non-JSON lines
+                            }
+                        }
+                    }
+                    
+                    if (streamComplete) break;
+                }
+                
+                // Process any remaining buffer content
+                if (buffer.trim() && !streamComplete) {
+                    const trimmedBuffer = buffer.trim();
+                    if (trimmedBuffer.startsWith('data: ')) {
+                        const data = trimmedBuffer.slice(6).trim();
+                        if (data !== '[DONE]') {
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.text) {
+                                    accumulatedText += parsed.text;
+                                }
+                            } catch (e) {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                }
+                
+                // Final update and cache
+                if (accumulatedText) {
+                    responseEl.innerHTML = formatStreamingText(accumulatedText);
+                    responseCache[cacheKey] = accumulatedText;
+                } else {
+                    throw new Error("No content received from stream");
+                }
+                
+            } catch (error) {
+                console.error("Streaming API Error:", error);
+                const errorMessage = error.message.includes("Rate limit") 
+                    ? "Rate limit exceeded. Please wait a moment before trying again."
+                    : `Sorry, a reflection could not be generated at this time. ${error.message}`;
+                responseEl.innerHTML = `<p class="text-red-500 text-center">${errorMessage}</p>`;
+            } finally {
+                loaderEl.classList.add('hidden');
+                responseEl.classList.remove('hidden');
+            }
+        }
+        
         async function callGemini(prompt, loaderEl, responseEl, lang) {
+            // Use streaming if enabled
+            if (ENABLE_STREAMING) {
+                return await callGeminiStreaming(prompt, loaderEl, responseEl, lang);
+            }
+            
             loaderEl.classList.remove('hidden');
             responseEl.classList.add('hidden');
             try {
                 // Check cache first - instant response for previously processed prompts
-                const cacheKey = `${prompt.substring(0, 100)}_${lang}`; // Use first 100 chars + lang as key
+                // Use hash of full prompt + language + model to prevent collisions
+                const cacheKey = `${hashString(prompt)}_${lang}_${selectedModel}`;
                 if (responseCache[cacheKey]) {
                     console.log("Using cached response");
                     const cachedText = responseCache[cacheKey];
@@ -313,9 +588,11 @@
                     const waitTime = MIN_API_CALL_INTERVAL - timeSinceLastCall;
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
+                // Fix Bug 2: Update timestamp immediately after rate limit check to prevent race conditions
+                lastApiCallTime = Date.now();
                 
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
+                const payload = { contents: chatHistory, modelType: selectedModel }; // Include model selection
                 
                 // Retry logic with exponential backoff
                 const maxRetries = 3;
@@ -323,7 +600,6 @@
                 
                 for (let attempt = 0; attempt < maxRetries; attempt++) {
                     try {
-                        lastApiCallTime = Date.now();
                         
                         const response = await fetch(APPS_SCRIPT_URL, { 
                             method: 'POST', 
@@ -354,12 +630,13 @@
                             }
                         }
                         
-                        // Check for other errors
+                        // Check for other errors in response body
                         if (result.error) {
                             throw new Error(result.error.message || JSON.stringify(result.error));
                         }
                         
-                        if (!response.ok && result.error) {
+                        // Check HTTP status independently - don't require result.error to exist
+                        if (!response.ok) {
                             throw new Error(`API call failed with status: ${response.status}`);
                         }
                         
@@ -368,7 +645,8 @@
                             const text = result.candidates[0].content.parts[0].text;
                             
                             // Cache the response for instant future access
-                            const cacheKey = `${prompt.substring(0, 100)}_${lang}`;
+                            // Use hash of full prompt + language to prevent collisions
+                            const cacheKey = `${hashString(prompt)}_${lang}`;
                             responseCache[cacheKey] = text;
                             
                             let htmlText = text
@@ -562,6 +840,18 @@
         });
         langEnBtn.addEventListener('click', () => setLanguage('en'));
         langArBtn.addEventListener('click', () => setLanguage('ar'));
+        
+        // Model selection handlers
+        function setModel(modelType) {
+            selectedModel = modelType;
+            modelFastBtn.classList.toggle('active-model', modelType === 'fast');
+            modelThinkingBtn.classList.toggle('active-model', modelType === 'thinking');
+            // Clear cache when model changes to ensure fresh responses
+            responseCache = {};
+        }
+        modelFastBtn.addEventListener('click', () => setModel('fast'));
+        modelThinkingBtn.addEventListener('click', () => setModel('thinking'));
+        
         geminiBtn.addEventListener('click', getVerseReflection);
         themeBtn.addEventListener('click', getThematicExploration);
         rootBtn.addEventListener('click', getRootAnalysis);
