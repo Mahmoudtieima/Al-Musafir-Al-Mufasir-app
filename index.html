@@ -131,6 +131,17 @@
         let lastApiCallTime = 0; // Track last API call time for rate limiting
         const MIN_API_CALL_INTERVAL = 2000; // Minimum 2 seconds between calls
         let responseCache = {}; // Cache responses to avoid re-processing
+        
+        // Simple hash function for cache keys to prevent collisions
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return hash.toString(36);
+        }
 
         // --- Translation Dictionary ---
         const translations = {
@@ -288,7 +299,8 @@
             responseEl.classList.add('hidden');
             try {
                 // Check cache first - instant response for previously processed prompts
-                const cacheKey = `${prompt.substring(0, 100)}_${lang}`; // Use first 100 chars + lang as key
+                // Use hash of full prompt + language to prevent collisions
+                const cacheKey = `${hashString(prompt)}_${lang}`;
                 if (responseCache[cacheKey]) {
                     console.log("Using cached response");
                     const cachedText = responseCache[cacheKey];
@@ -313,6 +325,8 @@
                     const waitTime = MIN_API_CALL_INTERVAL - timeSinceLastCall;
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
+                // Fix Bug 2: Update timestamp immediately after rate limit check to prevent race conditions
+                lastApiCallTime = Date.now();
                 
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
@@ -323,7 +337,6 @@
                 
                 for (let attempt = 0; attempt < maxRetries; attempt++) {
                     try {
-                        lastApiCallTime = Date.now();
                         
                         const response = await fetch(APPS_SCRIPT_URL, { 
                             method: 'POST', 
@@ -354,13 +367,17 @@
                             }
                         }
                         
-                        // Check for other errors
-                        if (result.error) {
-                            throw new Error(result.error.message || JSON.stringify(result.error));
+                        // Check HTTP status independently - don't require result.error to exist
+                        if (!response.ok) {
+                            const errorMsg = result.error 
+                                ? result.error.message || JSON.stringify(result.error)
+                                : `API call failed with status: ${response.status}`;
+                            throw new Error(errorMsg);
                         }
                         
-                        if (!response.ok && result.error) {
-                            throw new Error(`API call failed with status: ${response.status}`);
+                        // Check for other errors in response body
+                        if (result.error) {
+                            throw new Error(result.error.message || JSON.stringify(result.error));
                         }
                         
                         // Success - process response
@@ -368,7 +385,8 @@
                             const text = result.candidates[0].content.parts[0].text;
                             
                             // Cache the response for instant future access
-                            const cacheKey = `${prompt.substring(0, 100)}_${lang}`;
+                            // Use hash of full prompt + language to prevent collisions
+                            const cacheKey = `${hashString(prompt)}_${lang}`;
                             responseCache[cacheKey] = text;
                             
                             let htmlText = text
