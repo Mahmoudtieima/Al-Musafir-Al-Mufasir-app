@@ -1,0 +1,17 @@
+{
+  "name": "al-musafir-server",
+  "type": "module",
+  "packageManager": "yarn@4.9.1",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.7",
+    "dotenv": "^17.2.3",
+    "hono": "^4.10.8"
+  }
+}

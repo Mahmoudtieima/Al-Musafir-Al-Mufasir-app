@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: al-musafir-api
+    runtime: node
+    plan: free
+    buildCommand: yarn install
+    startCommand: yarn start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false

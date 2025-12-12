@@ -7,72 +7,368 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Crimson+Pro:wght@300;400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ink: #1a1a1a;
+            --ink-light: #4a4a4a;
+            --parchment: #faf8f5;
+            --parchment-dark: #f0ebe4;
+            --gold: #b8860b;
+            --gold-light: #d4a84b;
+            --sage: #5d7a64;
+            --sage-light: #8fa894;
+            --cream: #fdfcfa;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'IBM Plex Sans', sans-serif;
             direction: rtl;
-            background-color: #f1f5f9;
+            background: linear-gradient(145deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+            min-height: 100vh;
         }
+
         .arabic-text, .arabic-heading, .arabic-input {
-            font-family: 'Almarai', serif;
+            font-family: 'Amiri', serif;
         }
+
         .rtl-content { direction: rtl; }
         .ltr-content { direction: ltr; }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+
+        /* Contemplative Thinking Animation */
+        .thinking-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 2rem;
+        }
+
+        .thinking-orb {
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            animation: breathe 2s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(184, 134, 11, 0.3);
+        }
+
+        .thinking-orb:nth-child(2) { animation-delay: 0.3s; }
+        .thinking-orb:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes breathe {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.4;
+            }
+            50% {
+                transform: scale(1.4);
+                opacity: 1;
+            }
+        }
+
+        .thinking-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: var(--ink-light);
+            letter-spacing: 0.05em;
+            margin-top: 1rem;
+            animation: fadeInOut 2s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Streaming Response Container */
+        .stream-response {
+            position: relative;
+            background: var(--cream);
+            border: 1px solid rgba(184, 134, 11, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow:
+                0 4px 6px -1px rgba(0, 0, 0, 0.05),
+                0 2px 4px -1px rgba(0, 0, 0, 0.03),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .stream-response::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            border-radius: 1rem 1rem 0 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stream-response.streaming::before {
+            opacity: 1;
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Typing Cursor */
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: var(--gold);
+            margin-left: 2px;
+            vertical-align: text-bottom;
+            animation: blink 0.8s ease-in-out infinite;
+        }
+
+        .rtl-content .typing-cursor {
+            margin-left: 0;
+            margin-right: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Text reveal animation for streamed content */
+        .stream-response p,
+        .stream-response h1,
+        .stream-response h2,
+        .stream-response h3,
+        .stream-response li {
+            animation: textReveal 0.3s ease-out;
+        }
+
+        @keyframes textReveal {
+            from {
+                opacity: 0.7;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Legacy loader - keep for non-streaming loaders */
+        .loader {
+            border: 3px solid var(--parchment-dark);
+            border-top: 3px solid var(--gold);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
             animation: spin 1s linear infinite;
             margin: 0 auto 1rem;
         }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .gemini-content { text-align: left; }
-        .gemini-content.ltr-content { direction: ltr; }
-        .gemini-content.rtl-content { direction: rtl; text-align: right; }
-        .gemini-content h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 1rem; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 0.5rem; }
-        .gemini-content h2 { font-size: 1.25rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.75rem; color: #1e40af; }
-        .gemini-content h3 { font-size: 1.125rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e3a8a; }
-        .gemini-content h4 { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.5rem; color: #1d4ed8; }
-        .gemini-content p { margin-bottom: 1rem; line-height: 1.6; }
-        .gemini-content strong { font-weight: 700; color: #1e293b; }
-        .gemini-content em { font-style: italic; color: #475569; }
-        .gemini-content ul, .gemini-content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        /* Gemini Content Typography */
+        .gemini-content {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--ink);
+        }
+        .gemini-content.ltr-content { direction: ltr; text-align: left; }
+        .gemini-content.rtl-content { direction: rtl; text-align: right; font-family: 'Amiri', serif; }
+
+        .gemini-content h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--ink);
+            border-bottom: 1px solid var(--gold);
+            padding-bottom: 0.5rem;
+        }
+        .gemini-content h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+            color: var(--ink);
+        }
+        .gemini-content h3 {
+            font-size: 1.15rem;
+            font-weight: 500;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--ink-light);
+        }
+        .gemini-content h4 {
+            font-size: 1.05rem;
+            font-weight: 500;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--ink-light);
+        }
+        .gemini-content p { margin-bottom: 1.25rem; }
+        .gemini-content strong { font-weight: 600; color: var(--ink); }
+        .gemini-content em { font-style: italic; color: var(--ink-light); }
+        .gemini-content ul, .gemini-content ol { margin-bottom: 1.25rem; padding-left: 1.5rem; }
         .gemini-content.rtl-content ul, .gemini-content.rtl-content ol { padding-right: 1.5rem; padding-left: 0; }
         .gemini-content ul { list-style-type: disc; }
         .gemini-content ol { list-style-type: decimal; }
-        .gemini-content li { margin-bottom: 0.5rem; line-height: 1.6; }
-        .gemini-content code { background-color: #f1f5f9; color: #e11d48; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.875em; font-family: 'Courier New', monospace; }
-        .gemini-content pre { background-color: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .gemini-content li { margin-bottom: 0.5rem; }
+        .gemini-content code {
+            background-color: var(--parchment-dark);
+            color: var(--sage);
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        .gemini-content pre {
+            background-color: var(--ink);
+            color: var(--parchment);
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            margin-bottom: 1.25rem;
+        }
         .gemini-content pre code { background-color: transparent; color: inherit; padding: 0; }
-        .gemini-content a { color: #0284c7; text-decoration: underline; transition: color 0.2s; }
-        .gemini-content a:hover { color: #0369a1; }
-        .nav-arrow { background: none; border: none; font-size: 2.5rem; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
-        .nav-arrow:hover { color: #334155; }
-        .nav-arrow:disabled { color: #e2e8f0; cursor: not-allowed; }
-        .lang-btn { padding: 0.5rem 1rem; border: 1px solid #cbd5e1; color: #64748b; cursor: pointer; transition: all 0.2s; }
+        .gemini-content a { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; transition: color 0.2s; }
+        .gemini-content a:hover { color: var(--gold-light); }
+
+        /* Navigation & Controls */
+        .nav-arrow {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--ink-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.5;
+        }
+        .nav-arrow:hover { color: var(--gold); opacity: 1; }
+        .nav-arrow:disabled { color: var(--parchment-dark); cursor: not-allowed; opacity: 0.3; }
+
+        .lang-btn {
+            padding: 0.5rem 1.25rem;
+            border: 1px solid rgba(184, 134, 11, 0.3);
+            background: var(--cream);
+            color: var(--ink-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
         .lang-btn:first-child { border-radius: 0 0.5rem 0.5rem 0; }
         .lang-btn:last-child { border-radius: 0.5rem 0 0 0.5rem; }
-        .lang-btn.active-lang { background-color: #0284c7; color: white; border-color: #0284c7; }
-        .model-btn { background-color: transparent; color: #64748b; border: none; cursor: pointer; }
-        .model-btn.active-model { background-color: #0284c7; color: white; }
-        .model-btn:hover:not(.active-model) { background-color: #e2e8f0; color: #334155; }
+        .lang-btn.active-lang {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            color: white;
+            border-color: var(--gold);
+        }
+
+        .model-btn {
+            background-color: transparent;
+            color: var(--ink-light);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .model-btn.active-model {
+            background: linear-gradient(135deg, var(--sage) 0%, var(--sage-light) 100%);
+            color: white;
+        }
+        .model-btn:hover:not(.active-model) { background-color: var(--parchment-dark); color: var(--ink); }
+
+        /* Primary Action Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(184, 134, 11, 0.25);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(184, 134, 11, 0.35);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--sage) 0%, var(--sage-light) 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.875rem 2rem;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(93, 122, 100, 0.25);
+        }
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(93, 122, 100, 0.35);
+        }
+    /* Main container */
+        .main-card {
+            background: var(--cream);
+            border-radius: 1.5rem;
+            box-shadow:
+                0 10px 40px -10px rgba(0, 0, 0, 0.1),
+                0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(184, 134, 11, 0.1);
+        }
+
+        /* Input focus states */
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--gold) !important;
+            box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
+        }
+
+        /* Section dividers */
+        .section-divider {
+            border-color: var(--parchment-dark);
+            border-style: dashed;
+        }
+
+        /* Header styling */
+        .app-title {
+            color: var(--ink);
+        }
+        .app-title .highlight {
+            color: var(--gold);
+        }
+
+        /* Verse display */
+        .verse-container {
+            background: var(--cream);
+            border: 1px solid var(--parchment-dark);
+            border-radius: 1rem;
+        }
     </style>
 </head>
-<body class="text-slate-800">
+<body style="color: var(--ink)">
 
     <div class="container mx-auto p-4 md:p-8 max-w-5xl">
         
-        <header class="text-center mb-6">
-            <h1 class="arabic-heading text-4xl md:text-5xl text-slate-900">
-                <span>الـ</span><span class="text-sky-600">مسافر</span><span> الـ</span><span class="text-sky-600">مفسر</span>
+        <header class="text-center mb-8">
+            <h1 class="arabic-heading text-4xl md:text-5xl app-title">
+                <span>الـ</span><span class="highlight">مسافر</span><span> الـ</span><span class="highlight">مفسر</span>
             </h1>
-            <p class="text-lg text-slate-600 mt-2 ltr-content tracking-wider text-center">The Traveller, The Interpreter</p>
+            <p class="text-lg mt-3 ltr-content tracking-widest text-center" style="color: var(--ink-light); font-family: 'Crimson Pro', serif; font-style: italic;">The Traveller, The Interpreter</p>
         </header>
 
         <div id="lang-selector" class="flex justify-center mb-6">
@@ -80,7 +376,7 @@
             <button id="lang-ar" class="lang-btn">العربية</button>
         </div>
 
-        <main class="bg-white rounded-2xl shadow-lg p-6 md:p-8 min-h-[400px] mb-24">
+        <main class="main-card p-6 md:p-8 min-h-[400px] mb-24">
             
             <div id="loading-state" class="hidden text-center">
                 <div class="loader"></div>
@@ -103,49 +399,72 @@
                     <p class="arabic-text text-2xl text-slate-600">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
                 </div>
 
-                <div class="flex items-center justify-between gap-2 mb-8"><button id="prev-verse-btn" class="nav-arrow" aria-label="Previous Verse">&lt;</button><div class="p-6 bg-slate-50 rounded-xl border border-slate-200 min-h-[100px] flex flex-col items-center justify-center w-full"><p id="arabic-verse" class="arabic-text text-3xl md:text-4xl text-center leading-relaxed text-slate-900"></p><p id="english-verse" class="ltr-content text-center italic text-slate-600 mt-4"></p></div><button id="next-verse-btn" class="nav-arrow" aria-label="Next Verse">&gt;</button></div>
+                <div class="flex items-center justify-between gap-3 mb-8">
+                    <button id="prev-verse-btn" class="nav-arrow" aria-label="Previous Verse">‹</button>
+                    <div class="verse-container p-8 min-h-[120px] flex flex-col items-center justify-center w-full">
+                        <p id="arabic-verse" class="arabic-text text-3xl md:text-4xl text-center leading-loose" style="color: var(--ink)"></p>
+                        <p id="english-verse" class="ltr-content text-center mt-4" style="color: var(--ink-light); font-family: 'Crimson Pro', serif; font-style: italic; font-size: 1.1rem;"></p>
+                    </div>
+                    <button id="next-verse-btn" class="nav-arrow" aria-label="Next Verse">›</button>
+                </div>
                 
                 <!-- Verse Tadabbur Section -->
-                <div class="pt-6 border-t border-slate-200 rtl-content">
+                <div class="pt-6 border-t rtl-content" style="border-color: var(--parchment-dark)">
                     <div class="text-center mb-4">
-                        <div class="flex items-center justify-center gap-4 mb-3">
-                            <span class="text-sm text-slate-600" data-lang-key="modelSpeed">Model Speed:</span>
-                            <div class="flex gap-2 bg-slate-100 rounded-lg p-1">
-                                <button id="model-fast" class="model-btn px-4 py-1 rounded text-sm font-medium transition-colors active-model" data-model="fast">
-                                    <span data-lang-key="fast">⚡ Fast</span>
-                                </button>
-                                <button id="model-thinking" class="model-btn px-4 py-1 rounded text-sm font-medium transition-colors" data-model="thinking">
-                                    <span data-lang-key="thinking">🧠 Thinking</span>
-                                </button>
-                            </div>
-                        </div>
-                        <button id="gemini-btn" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition-colors shadow-md" data-lang-key="deepenVerse"></button>
+                        <button id="gemini-btn" class="btn-primary" data-lang-key="deepenVerse"></button>
                     </div>
-                    <div id="gemini-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="contemplating"></p></div>
-                    <div id="gemini-response" class="mt-4 p-6 bg-sky-50 rounded-lg border border-sky-200 text-slate-700 leading-relaxed hidden gemini-content"></div>
+                    <div id="gemini-loader" class="hidden mt-4">
+                        <div class="thinking-container">
+                            <div class="thinking-orb"></div>
+                            <div class="thinking-orb"></div>
+                            <div class="thinking-orb"></div>
+                        </div>
+                        <p class="thinking-text text-center" data-lang-key="contemplating"></p>
+                    </div>
+                    <div id="gemini-response" class="mt-4 hidden gemini-content stream-response"></div>
                 </div>
 
                 <!-- Exploration Tools Section -->
-                <div class="mt-10 pt-6 border-t-2 border-dashed border-slate-300 rtl-content">
-                    <h2 class="arabic-heading text-3xl text-center text-slate-700 mb-6" data-lang-key="explorationTools"></h2>
+                <div class="mt-10 pt-6 border-t-2 border-dashed rtl-content" style="border-color: var(--parchment-dark)">
+                    <h2 class="arabic-heading text-3xl text-center mb-6" style="color: var(--ink)" data-lang-key="explorationTools"></h2>
                     <div class="mb-8">
-                        <label for="theme-input" class="block mb-2 text-lg font-bold text-slate-700" data-lang-key="thematicExploration"></label>
-                        <div class="flex gap-2"><input type="text" id="theme-input" class="arabic-input w-full p-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" data-lang-key="themePlaceholder"><button id="theme-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors" data-lang-key="explore"></button></div>
-                        <div id="theme-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="exploring"></p></div>
-                        <div id="theme-response" class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hidden gemini-content"></div>
+                        <label for="theme-input" class="block mb-2 text-lg font-semibold" style="color: var(--ink)" data-lang-key="thematicExploration"></label>
+                        <div class="flex gap-2">
+                            <input type="text" id="theme-input" class="arabic-input w-full p-3 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-gold focus:border-transparent" data-lang-key="themePlaceholder">
+                            <button id="theme-btn" class="btn-primary whitespace-nowrap" data-lang-key="explore"></button>
+                        </div>
+                        <div id="theme-loader" class="hidden mt-4">
+                            <div class="thinking-container">
+                                <div class="thinking-orb"></div>
+                                <div class="thinking-orb"></div>
+                                <div class="thinking-orb"></div>
+                            </div>
+                            <p class="thinking-text text-center" data-lang-key="exploring"></p>
+                        </div>
+                        <div id="theme-response" class="mt-4 hidden gemini-content stream-response"></div>
                     </div>
                     <div>
-                        <label for="root-input" class="block mb-2 text-lg font-bold text-slate-700" data-lang-key="rootCompass"></label>
-                        <div class="flex gap-2"><input type="text" id="root-input" class="arabic-input w-full p-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" data-lang-key="rootPlaceholder"><button id="root-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors" data-lang-key="analyze"></button></div>
-                        <div id="root-loader" class="hidden text-center mt-4"><div class="loader"></div><p class="text-slate-500" data-lang-key="analyzing"></p></div>
-                        <div id="root-response" class="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hidden gemini-content"></div>
+                        <label for="root-input" class="block mb-2 text-lg font-semibold" style="color: var(--ink)" data-lang-key="rootCompass"></label>
+                        <div class="flex gap-2">
+                            <input type="text" id="root-input" class="arabic-input w-full p-3 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-gold focus:border-transparent" data-lang-key="rootPlaceholder">
+                            <button id="root-btn" class="btn-primary whitespace-nowrap" data-lang-key="analyze"></button>
+                        </div>
+                        <div id="root-loader" class="hidden mt-4">
+                            <div class="thinking-container">
+                                <div class="thinking-orb"></div>
+                                <div class="thinking-orb"></div>
+                                <div class="thinking-orb"></div>
+                            </div>
+                            <p class="thinking-text text-center" data-lang-key="analyzing"></p>
+                        </div>
+                        <div id="root-response" class="mt-4 hidden gemini-content stream-response"></div>
                     </div>
                 </div>
 
                  <!-- Daily Reflection Section -->
-                <div class="mt-10 pt-6 border-t-2 border-dashed border-slate-300 rtl-content">
+                <div class="mt-10 pt-6 border-t-2 border-dashed rtl-content" style="border-color: var(--parchment-dark)">
                     <div class="text-center">
-                        <button id="daily-reflection-btn" class="bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors shadow-lg text-lg" data-lang-key="dailyReflection"></button>
+                        <button id="daily-reflection-btn" class="btn-secondary text-lg" data-lang-key="dailyReflection"></button>
                     </div>
                 </div>
             </div>
@@ -157,57 +476,10 @@
         let quranCache = {}; 
         let fullMetadata = {};
         let selectedLanguage = 'en';
-        let selectedModel = 'fast'; // 'fast' or 'thinking'
-        let lastApiCallTime = 0; // Track last API call time for rate limiting
-        const MIN_API_CALL_INTERVAL = 2000; // Minimum 2 seconds between calls
+        let selectedModel = 'fast'; // Default to fast model
         let responseCache = {}; // Cache responses to avoid re-processing
-        // Streaming Configuration
-        // Set ENABLE_STREAMING to true to enable streaming responses (text appears as it's generated)
-        // Set to false to use traditional non-streaming mode (wait for complete response)
-        const ENABLE_STREAMING = true; // Set to false to use non-streaming mode
-        const STREAMING_ENDPOINT = null; // Set to SSE endpoint URL if different from main endpoint
-        
-        /*
-         * STREAMING SETUP INSTRUCTIONS:
-         * 
-         * Note: Google Apps Script Web Apps have limitations with true real-time streaming
-         * because responses are buffered. For best results, consider:
-         * 
-         * Option 1: Direct Gemini API (Recommended for true streaming)
-         * - Use Gemini API directly with streamGenerateContent()
-         * - Set STREAMING_ENDPOINT to your streaming API URL
-         * - This provides true real-time streaming
-         * 
-         * Option 2: Modified Google Apps Script (Limited streaming)
-         * - Modify your Apps Script to return chunks in SSE format
-         * - Note: Chunks may arrive in batches, not truly real-time
-         * 
-         * Example Google Apps Script modification:
-         * 
-         * function doPost(e) {
-         *   const data = JSON.parse(e.parameter.data);
-         *   const isStreaming = data.stream === true;
-         *   
-         *   if (isStreaming) {
-         *     // Call Gemini with streaming
-         *     const model = genai.getGenerativeModel({ model: "gemini-pro" });
-         *     const result = model.generateContentStream(data.contents);
-         *     
-         *     let output = ContentService.createTextOutput();
-         *     output.setMimeType(ContentService.MimeType.TEXT);
-         *     
-         *     for await (const chunk of result.stream) {
-         *       const text = chunk.text();
-         *       output.append('data: {"text": "' + text.replace(/"/g, '\\"') + '"}\n\n');
-         *     }
-         *     output.append('data: [DONE]\n\n');
-         *     return output;
-         *   }
-         *   
-         *   // Regular non-streaming response
-         *   // ... existing code ...
-         * }
-         */
+        // API Configuration - uses relative path in production
+        const API_ENDPOINT = "/api/gemini";
         
         // Simple hash function for cache keys to prevent collisions
         function hashString(str) {
@@ -242,9 +514,7 @@
         const prevVerseBtn = document.getElementById('prev-verse-btn');
         const langEnBtn = document.getElementById('lang-en');
         const langArBtn = document.getElementById('lang-ar');
-        const modelFastBtn = document.getElementById('model-fast');
-        const modelThinkingBtn = document.getElementById('model-thinking');
-        const themeInput = document.getElementById('theme-input');
+                const themeInput = document.getElementById('theme-input');
         const themeBtn = document.getElementById('theme-btn');
         const themeLoader = document.getElementById('theme-loader');
         const themeResponse = document.getElementById('theme-response');
@@ -501,17 +771,35 @@
             return html;
         }
         
+        // Helper to add typing cursor
+        function addTypingCursor(el) {
+            // Remove existing cursor first
+            const existingCursor = el.querySelector('.typing-cursor');
+            if (existingCursor) existingCursor.remove();
+            // Add new cursor at the end
+            const cursor = document.createElement('span');
+            cursor.className = 'typing-cursor';
+            el.appendChild(cursor);
+        }
+
+        // Helper to remove typing cursor
+        function removeTypingCursor(el) {
+            const cursor = el.querySelector('.typing-cursor');
+            if (cursor) cursor.remove();
+        }
+
         // Streaming version using Server-Sent Events (SSE) or ReadableStream
         async function callGeminiStreaming(prompt, loaderEl, responseEl, lang) {
             loaderEl.classList.remove('hidden');
             responseEl.classList.add('hidden');
+            responseEl.classList.remove('streaming');
             responseEl.innerHTML = '';
             responseEl.classList.remove('ltr-content', 'rtl-content');
             responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
-            
+
             let accumulatedText = '';
             const cacheKey = `${hashString(prompt)}_${lang}_${selectedModel}`;
-            
+
             try {
                 // Check cache first
                 if (responseCache[cacheKey]) {
@@ -522,39 +810,28 @@
                     responseEl.classList.remove('hidden');
                     return;
                 }
-                
-                const APPS_SCRIPT_URL = STREAMING_ENDPOINT || "https://script.google.com/macros/s/AKfycbxsZBDSAmLWTSl5l33yoCGyumtue0bWvDk3EBSapLFh5IdT5GJHy76L-TQoAXXwx5Oe/exec";
-                
-                // Rate limiting
-                const now = Date.now();
-                const timeSinceLastCall = now - lastApiCallTime;
-                if (timeSinceLastCall < MIN_API_CALL_INTERVAL) {
-                    const waitTime = MIN_API_CALL_INTERVAL - timeSinceLastCall;
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                }
-                lastApiCallTime = Date.now();
-                
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory, stream: true, modelType: selectedModel }; // Include model selection
-                
-                const response = await fetch(APPS_SCRIPT_URL, { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: 'data=' + encodeURIComponent(JSON.stringify(payload))
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    modelType: selectedModel
+                };
+
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`API call failed with status: ${response.status}`);
                 }
-                
+
                 // Read the streaming response
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
                 let streamComplete = false;
-                
+
                 // Show response element immediately when first chunk arrives
                 let firstChunkReceived = false;
                 
@@ -590,17 +867,19 @@
                                 // Handle text chunks
                                 if (parsed.text) {
                                     accumulatedText += parsed.text;
-                                    
+
                                     // Show response on first chunk
                                     if (!firstChunkReceived) {
                                         firstChunkReceived = true;
                                         responseEl.classList.remove('hidden');
+                                        responseEl.classList.add('streaming');
                                         loaderEl.classList.add('hidden');
                                     }
-                                    
-                                    // Update UI with formatted text
+
+                                    // Update UI with formatted text + cursor
                                     responseEl.innerHTML = formatStreamingText(accumulatedText);
-                                    
+                                    addTypingCursor(responseEl);
+
                                     // Auto-scroll to bottom to follow the stream
                                     responseEl.scrollTop = responseEl.scrollHeight;
                                 } 
@@ -673,143 +952,19 @@
                 
             } catch (error) {
                 console.error("Streaming API Error:", error);
-                const errorMessage = error.message.includes("Rate limit") 
-                    ? "Rate limit exceeded. Please wait a moment before trying again."
-                    : `Sorry, a reflection could not be generated at this time. ${error.message}`;
-                responseEl.innerHTML = `<p class="text-red-500 text-center">${errorMessage}</p>`;
+                responseEl.innerHTML = `<p class="text-red-500 text-center">Sorry, a reflection could not be generated. ${error.message}</p>`;
             } finally {
+                // Clean up streaming state
+                removeTypingCursor(responseEl);
+                responseEl.classList.remove('streaming');
                 loaderEl.classList.add('hidden');
                 responseEl.classList.remove('hidden');
             }
         }
         
+        // Always use streaming
         async function callGemini(prompt, loaderEl, responseEl, lang) {
-            // Use streaming if enabled
-            if (ENABLE_STREAMING) {
-                return await callGeminiStreaming(prompt, loaderEl, responseEl, lang);
-            }
-            
-            loaderEl.classList.remove('hidden');
-            responseEl.classList.add('hidden');
-            try {
-                // Check cache first - instant response for previously processed prompts
-                // Use hash of full prompt + language + model to prevent collisions
-                const cacheKey = `${hashString(prompt)}_${lang}_${selectedModel}`;
-                if (responseCache[cacheKey]) {
-                    console.log("Using cached response");
-                    const cachedText = responseCache[cacheKey];
-                    responseEl.innerHTML = formatStreamingText(cachedText);
-                    responseEl.classList.remove('ltr-content', 'rtl-content');
-                    responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
-                    loaderEl.classList.add('hidden');
-                    responseEl.classList.remove('hidden');
-                    return;
-                }
-                
-                const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsZBDSAmLWTSl5l33yoCGyumtue0bWvDk3EBSapLFh5IdT5GJHy76L-TQoAXXwx5Oe/exec";
-                
-                // Rate limiting: ensure minimum time between requests
-                const now = Date.now();
-                const timeSinceLastCall = now - lastApiCallTime;
-                if (timeSinceLastCall < MIN_API_CALL_INTERVAL) {
-                    const waitTime = MIN_API_CALL_INTERVAL - timeSinceLastCall;
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                }
-                // Fix Bug 2: Update timestamp immediately after rate limit check to prevent race conditions
-                lastApiCallTime = Date.now();
-                
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory, modelType: selectedModel }; // Include model selection
-                
-                // Retry logic with exponential backoff
-                const maxRetries = 3;
-                let lastError;
-                
-                for (let attempt = 0; attempt < maxRetries; attempt++) {
-                    try {
-                        
-                        const response = await fetch(APPS_SCRIPT_URL, { 
-                            method: 'POST', 
-                            headers: { 
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: 'data=' + encodeURIComponent(JSON.stringify(payload))
-                        });
-                        
-                        const responseText = await response.text();
-                        let result;
-                        try {
-                            result = JSON.parse(responseText);
-                        } catch (parseError) {
-                            console.error("Failed to parse response:", responseText);
-                            throw new Error("Invalid JSON response from server");
-                        }
-                        
-                        // Check for rate limit error (429)
-                        if (result.error && result.error.code === 429) {
-                            const retryAfter = Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff, max 10s
-                            if (attempt < maxRetries - 1) {
-                                console.log(`Rate limit hit. Retrying in ${retryAfter}ms... (attempt ${attempt + 1}/${maxRetries})`);
-                                await new Promise(resolve => setTimeout(resolve, retryAfter));
-                                continue; // Retry
-                            } else {
-                                throw new Error("Rate limit exceeded. Please wait a moment and try again.");
-                            }
-                        }
-                        
-                        // Check for other errors in response body
-                        if (result.error) {
-                            throw new Error(result.error.message || JSON.stringify(result.error));
-                        }
-                        
-                        // Check HTTP status independently - don't require result.error to exist
-                        if (!response.ok) {
-                            throw new Error(`API call failed with status: ${response.status}`);
-                        }
-                        
-                        // Success - process response
-                        if (result.candidates && result.candidates[0]?.content?.parts?.[0]) {
-                            const text = result.candidates[0].content.parts[0].text;
-                            
-                            // Cache the response for instant future access
-                            // Use hash of full prompt + language + model to prevent collisions
-                            const cacheKey = `${hashString(prompt)}_${lang}_${selectedModel}`;
-                            responseCache[cacheKey] = text;
-                            
-                            responseEl.innerHTML = formatStreamingText(text);
-                            responseEl.classList.remove('ltr-content', 'rtl-content');
-                            responseEl.classList.add(lang === 'ar' ? 'rtl-content' : 'ltr-content');
-                            return; // Success, exit function
-                        } else {
-                            console.error("Unexpected response structure:", result);
-                            throw new Error("Invalid response structure from API. Check console for details.");
-                        }
-                    } catch (error) {
-                        lastError = error;
-                        // If it's not a rate limit error or we've exhausted retries, break
-                        if (error.message && !error.message.includes("Rate limit") && !error.message.includes("429")) {
-                            break;
-                        }
-                        // For rate limit errors, continue retry loop
-                        if (attempt === maxRetries - 1) {
-                            break; // Last attempt failed
-                        }
-                    }
-                }
-                
-                // If we get here, all retries failed
-                throw lastError || new Error("Request failed after multiple attempts");
-                
-            } catch (error) {
-                console.error("Gemini API Error:", error);
-                const errorMessage = error.message.includes("Rate limit") 
-                    ? "Rate limit exceeded. Please wait a moment before trying again."
-                    : `Sorry, a reflection could not be generated at this time. ${error.message}`;
-                responseEl.innerHTML = `<p class="text-red-500 text-center">${errorMessage}</p>`;
-            } finally {
-                loaderEl.classList.add('hidden');
-                responseEl.classList.remove('hidden');
-            }
+            return callGeminiStreaming(prompt, loaderEl, responseEl, lang);
         }
 
         function getMasterPrompt() {
@@ -964,17 +1119,7 @@
         langEnBtn.addEventListener('click', () => setLanguage('en'));
         langArBtn.addEventListener('click', () => setLanguage('ar'));
         
-        // Model selection handlers
-        function setModel(modelType) {
-            selectedModel = modelType;
-            modelFastBtn.classList.toggle('active-model', modelType === 'fast');
-            modelThinkingBtn.classList.toggle('active-model', modelType === 'thinking');
-            // Clear cache when model changes to ensure fresh responses
-            responseCache = {};
-        }
-        modelFastBtn.addEventListener('click', () => setModel('fast'));
-        modelThinkingBtn.addEventListener('click', () => setModel('thinking'));
-        
+                
         geminiBtn.addEventListener('click', getVerseReflection);
         themeBtn.addEventListener('click', getThematicExploration);
         rootBtn.addEventListener('click', getRootAnalysis);
