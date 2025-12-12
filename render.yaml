@@ -3,8 +3,8 @@ services:
     name: al-musafir-api
     runtime: node
     plan: free
-    buildCommand: yarn install
-    startCommand: yarn start
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
