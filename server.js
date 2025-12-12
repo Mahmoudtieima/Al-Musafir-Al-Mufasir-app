@@ -47,7 +47,7 @@ function formatChunkAsSSE(chunkText) {
 
 // Serve the main HTML file
 app.get("/", (c) => {
-  const html = readFileSync(join(__dirname, "..", "index.html"), "utf-8");
+  const html = readFileSync(join(__dirname, "index.html"), "utf-8");
   return c.html(html);
 });
 

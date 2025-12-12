@@ -3,7 +3,6 @@ services:
     name: al-musafir-api
     runtime: node
     plan: free
-    rootDir: server
     buildCommand: yarn install
     startCommand: yarn start
     envVars:
