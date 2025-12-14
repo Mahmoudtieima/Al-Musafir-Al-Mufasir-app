@@ -15,7 +15,11 @@ const app = new Hono();
 const PORT = process.env.PORT || 3001;
 
 // Configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyC2cxiqRwt4Ci9p1TH6rVytdkCyzpkxq2U";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+if (!GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY environment variable is required");
+  process.exit(1);
+}
 const API_VERSION = "v1beta";
 
 // Model options
